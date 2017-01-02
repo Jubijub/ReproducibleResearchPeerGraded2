@@ -1,0 +1,21 @@
+---
+title: "Reproducible Research Week 4 Peer Graded project 2"
+author: "Jubijub"
+date: "2 janvier 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r init}
+## Downloading the source data
+projectData <- "https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip"
+zipFile <- "./NEI_PM25.zip"
+
+if (!file.exists(zipFile)){download.file(projectData, zipFile)}
+message("Source File downloaded")
+if(file.exists(zipFile)){unzip(zipfile=zipFile, exdir=".")}
+message("ZIP content extracted")
+```
