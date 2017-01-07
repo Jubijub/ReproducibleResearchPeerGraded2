@@ -63,14 +63,25 @@ str(noaa)
 sum(is.na(noaa))
 unique(noaa$PROPDMGEXP)
 unique(noaa$CROPDMGEXP)
+head(unique(noaa$EVTYPE),60)
 ```
 No missing data, however data about exponent is encoded, and no usable as such.
-Cleaning approach : 
+`EVTYPE` also requires some cleanup (presence of summary lines, etc...)
+
+#### EXPonent Cleaning approach : 
 
 * Find all the possible values for EXP columns
 * create a mapping table, giving the numeric power value matching each EXP symbol.
 * Invalid exponent values are translated into 0
 A matching table `expTable` will be built accordingly.
+```{r cleanexp, cache=TRUE}
+symbols <- unique(c(unique(noaa$PROPDMGEXP), unique(noaa$CROPDMGEXP)))
+#"K" "M" ""  "B" "m" "+" "0" "5" "6" "?" "4" "2" "3" "h" "7" "H" "-" "1" "8" "k"
+# The list of symbols below has been rearranged manually, to ease maintenance
+symbols <- c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "h", "H", "k", "K", "m", "M", "b", "B","", "+", "-", "?")
+expValue <- c(seq(0,9),2,2,3,3,6,6,9,9,0,0,0,0)
+expTable <- data.frame(symbols, expValue)
+```
 
 Two new columns have been created :
 
@@ -83,17 +94,47 @@ Both columns have been created according to the formula :
 
 where the `xxx` is PROP|CROP, and where `xxxEXP` is the translated exponent value found in the matching table built above.
 
-```{r cleanexp, cache=TRUE}
-symbols <- unique(c(unique(noaa$PROPDMGEXP), unique(noaa$CROPDMGEXP)))
-#"K" "M" ""  "B" "m" "+" "0" "5" "6" "?" "4" "2" "3" "h" "7" "H" "-" "1" "8" "k"
-# The list of symbols below has been rearranged manually, to ease maintenance
-symbols <- c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "h", "H", "k", "K", "m", "M", "b", "B","", "+", "-", "?")
-expValue <- c(seq(0,9),2,2,3,3,6,6,9,9,0,0,0,0)
-expTable <- data.frame(symbols, expValue)
-
-noaa$PROPDMGVALUE <- noaa$PROPDMG * 10 ^ expTable[match(noaa$PROPDMGEXP, expTable$symbols),2]
-noaa$CROPDMGVALUE <- noaa$CROPDMG * 10 ^ expTable[match(noaa$CROPDMGEXP, expTable$symbols),2]
+```{r cleanexp2, cache=TRUE}
+noaa[, PROPDGMGVALUE := PROPDMG * 10 ^ expTable[match(PROPDMGEXP, expTable$symbols),2]]
+noaa[, CROPPDGMGVALUE := CROPDMG * 10 ^ expTable[match(CROPDMGEXP, expTable$symbols),2]]
 ```
 We now have a tidy dataset to perform the analysis.
 
+#### EVTYPE cleaning approach
+
+* Put all event type in uppercase
+* Trim leading / trailing spaces
+* Remove all lines containing `SUMMARY` which are likely polluting the results
+* Cleaning some abbreviations / mispelling
+* Grouping some elements into one single category
+
+
+```{r cleanevt, cache=TRUE}
+library(stringr)
+noaa[, EVTYPE:=toupper(EVTYPE)]
+noaa[, EVTYPE:=trimws(EVTYPE)]
+noaa <- noaa[!(EVTYPE %like% "SUMMARY")]
+
+noaa[EVTYPE %like% "TSTM WIND", EVTYPE := "THUNDERSTORM WINDS"]
+noaa[EVTYPE %like% "THUNDERSTORM", EVTYPE := "THUNDERSTORM WINDS"]
+noaa[EVTYPE %like% "TORNADO", EVTYPE := "TORNADO"]
+noaa[EVTYPE %like% "FLOOD", EVTYPE := "FLOOD"]
+```
+
+
 ## Results
+```{r fatalities, cache=TRUE}
+fatalities <- noaa[, .(FATALITIES=sum(FATALITIES)), by=EVTYPE]
+fatalities <- fatalities[order(-FATALITIES)]
+fatalities <- transform(fatalities, EVTYPE=reorder(EVTYPE, -FATALITIES))
+
+library(ggplot2)
+g <- ggplot(fatalities[1:30], aes(EVTYPE,FATALITIES))
+g + geom_bar(stat="identity", aes(fill=FATALITIES)) +
+    theme_light() +
+    theme(axis.text.x= element_text(angle=90, vjust=0.5, size=8)) +
+    xlab("Type of events") +
+    ylab("Total number of fatalities") +
+    ggtitle("Total number of fatalities in the US between 1950 and 2011 by type of climate event")
+
+```
