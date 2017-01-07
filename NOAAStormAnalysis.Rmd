@@ -6,16 +6,60 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
+knitr::opts_chunk$set(fig.path='figure/fig', echo = TRUE)
 ```
+# Consequences of climate events on US population and properties between 1950 and 2011 based on U.S. National Oceanic and Atmospheric Administration’s (NOAA) storm database.
 
+## Synopsis
+(this paper is based on a Coursera Data Science - Reproducible research peer graded assignment).
+The goal of this study is to explore the effects of climate events on US population health as well as the economic impacts of such events (damage to properties), in order to determine which type of events have been the most impacting in each case.
+Such study should be able to inform administration actions toward preventing or minimising the effects of such natural events.
+
+## Data processing
+
+### Downloading data from the web
 ```{r init}
-## Downloading the source data
-projectData <- "https://d396qusza40orc.cloudfront.net/exdata%2Fdata%2FNEI_data.zip"
-zipFile <- "./NEI_PM25.zip"
+suppressMessages(library(R.utils))
+projectData <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+bunzip2File <- "./StormData.csv.bz2"
 
-if (!file.exists(zipFile)){download.file(projectData, zipFile)}
-message("Source File downloaded")
-if(file.exists(zipFile)){unzip(zipfile=zipFile, exdir=".")}
-message("ZIP content extracted")
+if (!file.exists(bunzip2File)) {
+    download.file(projectData, bunzip2File)
+    message("Source File downloaded")
+} else {
+    message("Source File already present in this folder.")
+}
+
+if (file.exists(bunzip2File)) {
+    bunzip2(bunzip2File, ext="bz2", FUN=bzfile, skip=TRUE, remove=FALSE)
+    message("Bunzip2 file content extracted")
+} 
+
 ```
+### Loading data
+
+```{r load, cache=TRUE}
+library(data.table)
+system.time(noaa <- read.csv("StormData.csv", header=TRUE))
+system.time(noaa2 <- fread("StormData.csv", showProgress = FALSE))
+noaa <- noaa2
+rm(noaa2)
+```
+Due to the speed gains, this analysis will use data.table package
+
+### Quick analysis of the data
+```{r analyze1, cache=TRUE}
+dim(noaa)
+```
+
+There are 902297 observations of 37 variables. However, only 8 variables will present an interest for this analysis : State, Event type (EVTYPE), # of Fatalities (FATALITIES), # of Injuries (INJURIES), Property damages (PROPDMG), Property damage exponent (PROPDMGEXP), Crop damages (CROPDMG) and Crop damages exponent (CROPDMGEXP).
+
+### Data processing
+```{r clean, cache=TRUE}
+noaa <- noaa[,.(STATE, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)]
+head(noaa)
+str(noaa)
+sum(is.na(noaa))
+```
+At this step we have a clean data set, with no missing data.
