@@ -20,7 +20,7 @@ Such study should be able to inform administration actions toward preventing or 
 
 ### Downloading data from the web
 ```{r init}
-suppressMessages(library(R.utils))
+suppressWarnings(suppressMessages(library(R.utils)))
 projectData <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 bunzip2File <- "./StormData.csv.bz2"
 
@@ -94,7 +94,7 @@ Both columns have been created according to the formula :
 
 where the `xxx` is PROP|CROP, and where `xxxEXP` is the translated exponent value found in the matching table built above.
 
-```{r cleanexp2, cache=TRUE}
+```{r cleanexp2, cache=TRUE, echo=FALSE}
 noaa[, PROPDGMGVALUE := PROPDMG * 10 ^ expTable[match(PROPDMGEXP, expTable$symbols),2]]
 noaa[, CROPPDGMGVALUE := CROPDMG * 10 ^ expTable[match(CROPDMGEXP, expTable$symbols),2]]
 ```
@@ -109,7 +109,7 @@ We now have a tidy dataset to perform the analysis.
 * Grouping some elements into one single category
 
 
-```{r cleanevt, cache=TRUE}
+```{r cleanevt, cache=TRUE, echo=FALSE}
 library(stringr)
 noaa[, EVTYPE:=toupper(EVTYPE)]
 noaa[, EVTYPE:=trimws(EVTYPE)]
@@ -123,18 +123,64 @@ noaa[EVTYPE %like% "FLOOD", EVTYPE := "FLOOD"]
 
 
 ## Results
+### Effects of climate events on US population health
+Two types of healths harm are present in the dataset : fatalities and injuries. They will thus be analyzed separately. 
 ```{r fatalities, cache=TRUE}
 fatalities <- noaa[, .(FATALITIES=sum(FATALITIES)), by=EVTYPE]
 fatalities <- fatalities[order(-FATALITIES)]
 fatalities <- transform(fatalities, EVTYPE=reorder(EVTYPE, -FATALITIES))
 
 library(ggplot2)
-g <- ggplot(fatalities[1:30], aes(EVTYPE,FATALITIES))
+g <- ggplot(fatalities[1:20], aes(EVTYPE,FATALITIES))
 g + geom_bar(stat="identity", aes(fill=FATALITIES)) +
     theme_light() +
     theme(axis.text.x= element_text(angle=90, vjust=0.5, size=8)) +
     xlab("Type of events") +
     ylab("Total number of fatalities") +
-    ggtitle("Total number of fatalities in the US between 1950 and 2011 by type of climate event")
+    ggtitle("Total number of fatalities in the US between 1950 and 2011 by type of climate event \n (Top 20 events)")
 
 ```
+
+We can see the top 3 main cause for casulaties are tornadoes, excessive heat and floods.
+
+Next the injuries.
+```{r injuries, cache=TRUE}
+injuries <- noaa[, .(INJURIES=sum(INJURIES)), by=EVTYPE]
+injuries <- injuries[order(-INJURIES)]
+injuries <- transform(injuries, EVTYPE=reorder(EVTYPE, -INJURIES))
+
+library(ggplot2)
+g <- ggplot(injuries[1:20], aes(EVTYPE,INJURIES))
+g + geom_bar(stat="identity", aes(fill=INJURIES)) +
+    theme_light() +
+    theme(axis.text.x= element_text(angle=90, vjust=0.5, size=8)) +
+    xlab("Type of events") +
+    ylab("Total number of injuries") +
+    ggtitle("Total number of injuries in the US between 1950 and 2011 by type of climate event \n (Top 20 events)")
+
+```
+
+### Economic effects of climate events on US population health
+There are two types of economic effects on this dataset : 
+
+* damages on properties
+* damages on crop
+
+The figure below will show the cumulated total damages for this two types.
+
+```{r economic, cache=TRUE}
+noaa[, TOTALDMGVALUE := PROPDGMGVALUE + CROPPDGMGVALUE]
+economic <- noaa[, .(TOTALDMGVALUE=sum(TOTALDMGVALUE)), by=EVTYPE]
+economic[, TOTALDMGVALUEBN := TOTALDMGVALUE / 1e9]
+economic <- economic[order(-TOTALDMGVALUE)]
+economic <- transform(economic, EVTYPE=reorder(EVTYPE, -TOTALDMGVALUE))
+
+library(ggplot2)
+g <- ggplot(economic[1:20], aes(EVTYPE,TOTALDMGVALUEBN))
+g + geom_bar(stat="identity", aes(fill=TOTALDMGVALUEBN)) +
+    theme_light() +
+    theme(axis.text.x= element_text(angle=90, vjust=0.5, size=8)) +
+    xlab("Type of events") +
+    ylab("Total economic damage in $Bn") +
+    ggtitle("Total economic damage in the US between 1950 and 2011 \n by type of climate event (Top 20 events)")
+
