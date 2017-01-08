@@ -148,7 +148,7 @@ g + geom_bar(stat="identity", aes(fill=FATALITIES)) +
 
 ```
 
-We can see the top 3 main cause for casulaties are tornadoes, excessive heat and floods.
+**We can see the top 3 main causes for casulaties are tornadoes, excessive heat and floods. Tornadoes are a key contributor to casulaties, being responsible for more casulaties than the next 3 type of events combined.** 
 
 Next the injuries. An `injuries` data.table is created by summing all injuries numbers grouped by event type. The dataframe is then reordered in descending order of total injuries.
 ```{r injuries, cache=TRUE}
@@ -165,6 +165,8 @@ g + geom_bar(stat="identity", aes(fill=INJURIES)) +
     ggtitle("Total number of injuries in the US between 1950 and 2011 by type of climate event \n (Top 20 events)")
 
 ```
+
+**We can see here that the top 3 main causes for injuries are tornadoes, thunderstorm winds, and floods. Tordano is a massive contributor, causing more injuries alone that all other top 20 types combined.**
 
 ### Economic effects of climate events on US population health
 There are two types of economic effects on this dataset : 
@@ -192,3 +194,8 @@ g + geom_bar(stat="identity", aes(fill=TOTALDMGVALUEBN)) +
     labs(fill="Economic damages value") +
     ggtitle("Total economic damage in the US between 1950 and 2011 \n by type of climate event (Top 20 events)")
 ```
+
+**This time we can see that tornadoes are only the 3rd major contributor in terms of economic damages, behind floods and hurricanes**.
+
+**A strategy aiming at reducing health hazard of natural events would thus need to focus on tornadoes / winds, heat and floods prevention measures, while a strategy aiming at reducing economic impact of such events would focus on floods, typhoon and tornadoes prevention measures.** 
+
